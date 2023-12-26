@@ -26,9 +26,9 @@
   *                     one of the dimensional planes (The real
   *                     length is side c in a right angled triangle)
   */
-module chamferCube(size, chamfers = [undef, undef, undef], ch = 1, ph1 = 1, ph2 = undef, ph3 = undef, ph4 = undef, sizeX = undef, sizeY = undef, sizeZ = undef, chamferHeight = undef, chamferX = undef, chamferY = undef, chamferZ = undef) {
+module chamferCube(size, chamfers = [undef, undef, undef], ch = 1, ph1 = 1, ph2 = undef, ph3 = undef, ph4 = undef, sizeX = undef, sizeY = undef, sizeZ = undef, chamferHeight = undef, chamferX = undef, chamferY = undef, chamferZ = undef, roundCube = false, center = true) {
     if(size[0]) {
-        chamferCubeImpl(size[0], size[1], size[2], ch, chamfers[0], chamfers[1], chamfers[2]);
+        chamferCubeImpl(size[0], size[1], size[2], ch, chamfers[0], chamfers[1], chamfers[2], roundCube, center);
     } else {
         // keep backwards compatibility
         size     = (sizeX == undef) ? size : sizeX;
@@ -39,18 +39,27 @@ module chamferCube(size, chamfers = [undef, undef, undef], ch = 1, ph1 = 1, ph2 
         ph3      = (chamferY == undef) ? ph3 : chamferY;
         ph4      = (chamferZ == undef) ? ph4 : chamferZ;
 
-        chamferCubeImpl(size, chamfers, ch, ph1, ph2, ph3, ph4);
+        chamferCubeImpl(size, chamfers, ch, ph1, ph2, ph3, ph4, roundCube, center);
     }
 }
 
-module chamferCubeImpl(sizeX, sizeY, sizeZ, chamferHeight, chamferX, chamferY, chamferZ) {
+module chamferCubeImpl(sizeX, sizeY, sizeZ, chamferHeight, chamferX, chamferY, chamferZ, roundCube, center) {
     chamferX = (chamferX == undef) ? [1, 1, 1, 1] : chamferX;
     chamferY = (chamferY == undef) ? [1, 1, 1, 1] : chamferY;
     chamferZ = (chamferZ == undef) ? [1, 1, 1, 1] : chamferZ;
     chamferCLength = sqrt(chamferHeight * chamferHeight * 2);
 
     difference() {
-        cube([sizeX, sizeY, sizeZ]);
+        if(roundCube) {
+            translate([chamferHeight, chamferHeight, chamferHeight])
+                minkowski()
+                {
+                    cube([sizeX-2*chamferHeight, sizeY-2*chamferHeight, sizeZ-2*chamferHeight]);
+                    sphere(chamferHeight);
+                }
+        } else {
+            cube([sizeX, sizeY, sizeZ]);
+        }
         for(x = [0 : 3]) {
             chamferSide1 = min(x, 1) - floor(x / 3); // 0 1 1 0
             chamferSide2 = floor(x / 2); // 0 0 1 1
