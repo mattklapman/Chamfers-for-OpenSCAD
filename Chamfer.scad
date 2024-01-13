@@ -82,6 +82,83 @@ module chamferCubeImpl(sizeX, sizeY, sizeZ, chamferHeight, chamferX, chamferY, c
     }
 }
 
+module chamferChoppedCube(size, sizeX2, chamfers = [undef, undef, undef], ch = 1, fillet = false, center = true) {
+    sX1 = max(size[0], sizeX2);
+    sX2 = min(size[0], sizeX2);
+    chamferChoppedCubeImpl(sX1, sX2, size[1], size[2], ch, chamfers[0], chamfers[1], chamfers[2], fillet, center);
+}
+
+module chamferChoppedCubeImpl(sizeX1, sizeX2, sizeY, sizeZ, chamferHeight, chamferX, chamferY, chamferZ, fillet, center) {
+    chamferX = (chamferX == undef) ? [1, 1, 1, 1] : chamferX;
+    chamferY = (chamferY == undef) ? [1, 1, 1, 1] : chamferY;
+    chamferZ = (chamferZ == undef) ? [1, 1, 1, 1] : chamferZ;
+    chamferCLength = sqrt(chamferHeight * chamferHeight * 2);
+    angleLength = sqrt((sizeX1 - sizeX2)^2 + sizeY*sizeY);
+    angle = atan(sizeY/(sizeX1 - sizeX2));
+    angleChamferShift    = (0.5*sqrt(2 * chamferCLength*chamferCLength) * tan(90-angle)) / 2;
+    echo("shift=",angleChamferShift);
+    echo("chamferCLength=",chamferCLength);
+
+    difference() {
+            linear_extrude(sizeZ)
+                polygon(
+                    points=[
+                        [0, 0],
+                        [sizeX1, 0],
+                        [sizeX1, sizeY],
+                        [sizeX1 - sizeX2, sizeY]]
+                );
+        for(x = [0 : 3]) {
+            chamferSide1 = min(x, 1) - floor(x / 3); // 0 1 1 0
+            chamferSide2 = floor(x / 2); // 0 0 1 1
+            if(chamferX[x]) {
+                translate([-0.1, chamferSide1 * sizeY, -chamferHeight + chamferSide2 * sizeZ])
+                rotate([45, 0, 0])
+                cube([sizeX1 + 0.2, chamferCLength, chamferCLength]);
+            }
+            if(chamferY[x]) {
+                if (x > 1) {
+                    translate([-chamferHeight + chamferSide2 * sizeX1, -0.1, chamferSide1 * sizeZ])
+                    rotate([0, 45, 0])
+                    cube([chamferCLength, sizeY + 0.2, chamferCLength]);
+                }
+                else {
+                    // chamfer angular sides
+                    //translate([-chamferHeight + chamferSide2 * sizeX1, 0, chamferSide1 * sizeZ])
+                    //rotate([0, 45, angle - 90])
+                    //cube([chamferCLength, 2*angleLength, chamferCLength]);
+                    
+                    //center
+                    translate([0, 0, chamferSide1 * sizeZ])
+                    rotate([0, 45, angle - 90])
+                    cube([chamferCLength, 2*angleLength, chamferCLength], center=true);                   
+                    
+                    //translate([-chamferHeight + chamferSide2 * sizeX1, 0, chamferSide1 * sizeZ])
+                    //rotate([0, 45, angle - 90])
+                    //cube([chamferCLength-angleChamferShift, 2*angleLength, chamferCLength-angleChamferShift]);
+
+                    //translate([-chamferHeight + chamferSide2 * sizeX1, angleChamferShift, chamferSide1 * sizeZ])
+                    //rotate([0, 45, angle - 90])
+                    //cube([chamferCLength, 2*angleLength, chamferCLength]);
+                }
+            }
+            if(chamferZ[x]) {
+                if (x != 3) {
+                    translate([chamferSide1 * sizeX1, -chamferHeight + chamferSide2 * sizeY, -0.1])
+                    rotate([0, 0, 45])
+                    cube([chamferCLength, chamferCLength, sizeZ + 0.2]);
+                }
+                else {
+                    //translate([chamferSide2 * (sizeX1 - sizeX2), -chamferHeight + chamferSide2 * sizeY, -0.1])
+                    translate([chamferSide2 * (sizeX1 - sizeX2 - (sqrt(2 * chamferCLength*chamferCLength)/2 * tan(90-angle))), -chamferHeight + chamferSide2 * sizeY, -0.1])
+                    rotate([0, 0, 45])
+                    cube([chamferCLength, chamferCLength, sizeZ + 0.2]);
+                }
+            }
+        }
+    }
+}
+
 /**
   * chamferCylinder returns an cylinder or cone with 45° chamfers on
   * the edges of the cylinder. The chamfers are diectly printable on
